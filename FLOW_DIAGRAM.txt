@@ -1,0 +1,335 @@
+================================================================================
+DIAGRAMA DE FLUJO - SISTEMA DE CARGA DE ARCHIVOS
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          INICIO: USUARIO CARGA ARCHIVO                      │
+└─────────────────────────┬───────────────────────────────────────────────────┘
+                          │
+                          ↓
+        ┌─────────────────────────────────────────┐
+        │   Detección de Método de Carga          │
+        │                                         │
+        │   ├─ Drag & Drop                        │
+        │   └─ Clic para Seleccionar              │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+        ┌─────────────────────────────────────────┐
+        │  FileUploadSection Component            │
+        │  ├─ onDragOver()                        │
+        │  ├─ onDrop()                            │
+        │  ├─ handleFileSelect()                  │
+        │  └─ processFile()                       │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+        ┌─────────────────────────────────────────┐
+        │  State: isLoading = true                │
+        │  Mostrar indicador de progreso          │
+        │  onLoad: Loader2 icon animado          │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    parseFile() - PARSEAR ARCHIVO                            │
+│                                                                             │
+│  const text = await parseFile(file)                                         │
+│                                                                             │
+│  Detecta tipo y elige parser:                                              │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ PDF                                                      │              │
+│  │ └─→ parsePdfFile() → pdfjs-dist                         │              │
+│  │                                                          │              │
+│  │ DOCX/DOC                                                │              │
+│  │ └─→ parseDocxFile() → mammoth                           │              │
+│  │                                                          │              │
+│  │ Imagen (PNG, JPG, etc)                                  │              │
+│  │ └─→ parseImageFile() → tesseract.js (OCR)              │              │
+│  │                                                          │              │
+│  │ Texto (TXT, MD)                                         │              │
+│  │ └─→ parseTextFile() → FileReader nativo                │              │
+│  └──────────────────────────────────────────────────────────┘              │
+│                                                                             │
+│  Output: rawText (string)                                                  │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                extractAllData() - EXTRAER DATOS ESTRUCTURADOS               │
+│                                                                             │
+│  const data = extractAllData(rawText)                                       │
+│                                                                             │
+│  Aplicar patrones RegEx:                                                   │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ Email:        /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/      │              │
+│  │ Teléfono:     /(\+\d{1,3}[-.\s]?)?\(?\d{3}\)?/          │              │
+│  │ Nombre:       /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/      │              │
+│  │ LinkedIn:     /linkedin\.com\/in\/([a-zA-Z0-9-]+)/      │              │
+│  │ Website:      /https?:\/\/(?:www\.)?[a-zA-Z0-9-]+/     │              │
+│  │ Ubicación:    /([A-Z][a-zA-Z]+),\s*([A-Z]{2}|...)/     │              │
+│  │ Puesto:       /(?:Senior|Junior|Lead|Manager|...)/     │              │
+│  │ Bio:          /(?:summary|bio|about|overview).../i      │              │
+│  └──────────────────────────────────────────────────────────┘              │
+│                                                                             │
+│  Output: ExtractedData                                                     │
+│  {                                                                          │
+│    name?: string,                                                          │
+│    email?: string,                                                         │
+│    phone?: string,                                                         │
+│    location?: string,                                                      │
+│    linkedIn?: string,                                                      │
+│    website?: string,                                                       │
+│    title?: string,                                                         │
+│    bio?: string,                                                           │
+│    rawText?: string                                                        │
+│  }                                                                          │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│           getConfidenceScore() - CALCULAR PUNTUACIÓN DE CONFIANZA          │
+│                                                                             │
+│  const confidence = getConfidenceScore(data)  // 0-100                    │
+│                                                                             │
+│  Puntuación por campo encontrado:                                          │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ Nombre:              +20                                 │              │
+│  │ Email:               +20                                 │              │
+│  │ Teléfono:            +15                                 │              │
+│  │ Ubicación:           +15                                 │              │
+│  │ LinkedIn/Website:    +15                                 │              │
+│  │ Puesto:              +15                                 │              │
+│  │                                                          │              │
+│  │ Total Máximo:        100 puntos = 100%                  │              │
+│  └──────────────────────────────────────────────────────────┘              │
+│                                                                             │
+│  Interpretación:                                                           │
+│  ├─ 70-100%: 🟢 Alta confianza                              │              │
+│  ├─ 40-69%:  🟡 Confianza media                             │              │
+│  └─ 0-39%:   🔴 Baja confianza                              │              │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ↓
+        ┌─────────────────────────────────────────┐
+        │  State: showPreview = true              │
+        │  State: extractedData = data            │
+        │  State: confidenceScore = score         │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              MOSTRAR DIÁLOGO DE VISTA PREVIA                               │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════╗                │
+│  ║ Vista previa de datos extraídos                       ║                │
+│  ║                                                       ║                │
+│  ║ Confianza: ████████████░░░░░░░░░░ 75% (Alta)        ║                │
+│  ║                                                       ║                │
+│  ║ ┌─────────────────────────────────────────────────┐  ║                │
+│  ║ │ NOMBRE:            Juan Perez                   │  ║                │
+│  ║ │ EMAIL:             juan@example.com             │  ║                │
+│  ║ │ TELÉFONO:          +591 7 1234567                │  ║                │
+│  ║ │ UBICACIÓN:         La Paz, Bolivia              │  ║                │
+│  ║ │ PUESTO:            Software Engineer            │  ║                │
+│  ║ │ LINKEDIN:          linkedin.com/in/juanperez   │  ║                │
+│  ║ └─────────────────────────────────────────────────┘  ║                │
+│  ║                                                       ║                │
+│  ║ [Descartar]                      [Aplicar Datos] ✓  ║                │
+│  ╚═══════════════════════════════════════════════════════╝                │
+│                                                                             │
+│  Usuario revisa y decide:                                                  │
+│  ├─ [Descartar]:    Limpia estado, intenta otro archivo                   │
+│  └─ [Aplicar]:      Procede a mapeo de datos                              │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+                      ↓ (Usuario hace clic [Aplicar])
+        ┌─────────────────────────────────────────┐
+        │ handleApplyData()                       │
+        │                                         │
+        │ handleDataExtracted(extractedData)      │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+        ┌─────────────────────────────────────────┐
+        │ Mapeo a PersonalInfo                    │
+        │                                         │
+        │ if (extractedData.name)                 │
+        │   updatedData.fullName = name           │
+        │                                         │
+        │ if (extractedData.email)                │
+        │   updatedData.email = email             │
+        │                                         │
+        │ if (extractedData.phone)                │
+        │   updatedData.phone = phone             │
+        │                                         │
+        │ if (extractedData.location)             │
+        │   updatedData.address = location        │
+        │                                         │
+        │ if (extractedData.linkedIn)             │
+        │   updatedData.linkedin = linkedIn       │
+        │                                         │
+        │ if (extractedData.website)              │
+        │   updatedData.website = website         │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+        ┌─────────────────────────────────────────┐
+        │ onChange(updatedData)                   │
+        │                                         │
+        │ Llamar callback de parent component     │
+        │ personal-info-step.tsx                  │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+        ┌─────────────────────────────────────────┐
+        │ Cerrar diálogo de vista previa          │
+        │ Limpiar estado                          │
+        │ Reset formulario de upload              │
+        └────────────────┬────────────────────────┘
+                         │
+                         ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              ACTUALIZAR FORMULARIO DE INFORMACIÓN PERSONAL                  │
+│                                                                             │
+│  Los campos se llenan automáticamente:                                     │
+│                                                                             │
+│  ┌─────────────────────────────────────────────┐                          │
+│  │ ✓ Nombre:          Juan Perez               │                          │
+│  │ ✓ Email:           juan@example.com         │                          │
+│  │ ✓ Teléfono:        +591 7 1234567            │                          │
+│  │ ✓ Dirección:       La Paz, Bolivia          │                          │
+│  │ ✓ LinkedIn:        linkedin.com/in/juan     │                          │
+│  │ ✓ Sitio Web:       juanperez.com            │                          │
+│  └─────────────────────────────────────────────┘                          │
+│                                                                             │
+│  Usuario puede:                                                            │
+│  ├─ Continuar al siguiente paso                                            │
+│  └─ Ajustar manualmente cualquier campo                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                         │
+                         ↓
+                    ┌──────────┐
+                    │ FIN ✅   │
+                    └──────────┘
+
+================================================================================
+MANEJO DE ERRORES
+================================================================================
+
+En cualquier punto del flujo, si ocurre error:
+
+┌───────────────────────────────────┐
+│ Catch (error)                     │
+├───────────────────────────────────┤
+│ setError(error.message)           │
+│ setIsLoading(false)               │
+│ setExtractedData(null)            │
+└───────────────────────────────────┘
+            │
+            ↓
+┌───────────────────────────────────────────────────┐
+│ Mostrar mensaje de error amigable                 │
+│                                                   │
+│ ⚠️ Error al procesar                              │
+│ "Failed to parse PDF file..."                     │
+│                                                   │
+│ [X] Cerrar                                        │
+└───────────────────────────────────────────────────┘
+
+================================================================================
+PERFORMANCE ESPERADO
+================================================================================
+
+PDF pequeño (< 2MB)
+├─ Parsing:     ~400ms (pdfjs-dist)
+├─ Extracción:  ~100ms (regex)
+├─ UI:          ~100ms (render)
+└─ TOTAL:       ~500ms
+
+DOCX pequeño (< 1MB)
+├─ Parsing:     ~100ms (mammoth)
+├─ Extracción:  ~100ms (regex)
+├─ UI:          ~100ms (render)
+└─ TOTAL:       ~200ms
+
+Imagen (< 1MB)
+├─ OCR:         ~2-5s (tesseract.js - procesamiento intensivo)
+├─ Extracción:  ~100ms (regex)
+├─ UI:          ~100ms (render)
+└─ TOTAL:       ~2-5 segundos
+
+Text (< 100KB)
+├─ Parsing:     ~50ms (FileReader)
+├─ Extracción:  ~50ms (regex)
+├─ UI:          ~100ms (render)
+└─ TOTAL:       ~100ms
+
+================================================================================
+EJEMPLOS DE CONFIANZA
+================================================================================
+
+CASO 1: CV Profesional Bien Estructurado
+├─ Nombre encontrado:       ✓ (+20)
+├─ Email encontrado:        ✓ (+20)
+├─ Teléfono encontrado:     ✓ (+15)
+├─ Ubicación encontrada:    ✓ (+15)
+├─ Puesto encontrado:       ✓ (+15)
+├─ LinkedIn encontrado:     ✓ (+15)
+└─ TOTAL: 100/100 = 100% (🟢 ALTA CONFIANZA)
+
+CASO 2: Documento Parcial
+├─ Nombre encontrado:       ✓ (+20)
+├─ Email encontrado:        ✓ (+20)
+├─ Teléfono encontrado:     ✗
+├─ Ubicación encontrada:    ✓ (+15)
+├─ Puesto encontrado:       ✗
+├─ LinkedIn encontrado:     ✓ (+15)
+└─ TOTAL: 70/100 = 70% (🟡 CONFIANZA MEDIA)
+
+CASO 3: Documento Incompleto
+├─ Nombre encontrado:       ✓ (+20)
+├─ Email encontrado:        ✓ (+20)
+├─ Teléfono encontrado:     ✗
+├─ Ubicación encontrado:    ✗
+├─ Puesto encontrado:       ✗
+├─ LinkedIn encontrado:     ✗
+└─ TOTAL: 40/100 = 40% (🟡 CONFIANZA MEDIA/BAJA)
+
+================================================================================
+SEGURIDAD Y PRIVACIDAD
+================================================================================
+
+En cada paso del flujo:
+
+┌──────────────────────────────────────────────────────────────────┐
+│ ✅ GARANTÍAS DE PRIVACIDAD                                       │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│ 1. Lectura del archivo                                          │
+│    └─ FileReader API nativo del navegador                      │
+│    └─ Data NUNCA sale del navegador                            │
+│                                                                 │
+│ 2. Parsing del archivo                                         │
+│    └─ pdfjs-dist → Ejecuta en navegador                       │
+│    └─ mammoth → Ejecuta en navegador                          │
+│    └─ tesseract.js → Ejecuta en navegador                     │
+│    └─ NINGUNA librería envía datos a servidores               │
+│                                                                 │
+│ 3. Extracción de datos                                         │
+│    └─ RegEx patterns → Ejecutan en navegador                  │
+│    └─ JavaScript puro → Sin llamadas a API                    │
+│                                                                 │
+│ 4. Almacenamiento                                              │
+│    └─ extactedData se guarda solo en memoria                  │
+│    └─ Se limpia cuando usuario cierra diálogo                 │
+│    └─ localStorage NUNCA se utiliza                           │
+│                                                                 │
+│ 5. Envío de datos                                              │
+│    └─ Los datos SOLO se usan localmente                       │
+│    └─ Se pasan al formulario del usuario                      │
+│    └─ El usuario decide qué guardar                           │
+│                                                                 │
+└──────────────────────────────────────────────────────────────────┘
+
+================================================================================
