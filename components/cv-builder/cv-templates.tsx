@@ -2,7 +2,7 @@
 
 import type { CVData } from "@/lib/cv-types"
 import type { Language } from "@/lib/translations"
-import { getTranslation } from "@/lib/translations"
+import { getTranslation, translateDate } from "@/lib/translations"
 import { Mail, Phone, MapPin, Globe, Linkedin } from "lucide-react"
 
 export type TemplateType = "harvard" | "modern" | "minimal"
@@ -91,8 +91,8 @@ function HarvardTemplate({ data, language = "en" }: { data: CVData; language: La
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
-                    {edu.startDate}
-                    {edu.endDate && ` - ${edu.endDate}`}
+                    {translateDate(edu.startDate, language)}
+                    {edu.endDate && ` - ${translateDate(edu.endDate, language)}`}
                   </span>
                 </div>
                 {edu.achievements && (
@@ -273,8 +273,8 @@ function ModernTemplate({ data, language = "en" }: { data: CVData; language: Lan
                       {edu.field && ` in ${edu.field}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {edu.startDate}
-                      {edu.endDate && ` - ${edu.endDate}`}
+                      {translateDate(edu.startDate, language)}
+                      {edu.endDate && ` - ${translateDate(edu.endDate, language)}`}
                     </p>
                   </div>
                 ))}
@@ -302,8 +302,8 @@ function ModernTemplate({ data, language = "en" }: { data: CVData; language: Lan
                         </p>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {exp.startDate}
-                        {exp.endDate && ` - ${exp.endDate}`}
+                        {translateDate(exp.startDate, language)}
+                        {exp.endDate && ` - ${translateDate(exp.endDate, language)}`}
                       </span>
                     </div>
                     {exp.description && (
@@ -331,8 +331,8 @@ function ModernTemplate({ data, language = "en" }: { data: CVData; language: Lan
                         <p className="text-sm text-muted-foreground">{lead.organization}</p>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {lead.startDate}
-                        {lead.endDate && ` - ${lead.endDate}`}
+                        {translateDate(lead.startDate, language)}
+                        {lead.endDate && ` - ${translateDate(lead.endDate, language)}`}
                       </span>
                     </div>
                     {lead.description && (
@@ -397,7 +397,7 @@ function MinimalTemplate({ data, language = "en" }: { data: CVData; language: La
                     <span className="text-muted-foreground"> at {exp.company}</span>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {exp.startDate} - {exp.endDate || "Present"}
+                    {translateDate(exp.startDate, language)} - {translateDate(exp.endDate || '', language) || getTranslation(language, 'present')}
                   </span>
                 </div>
                 {exp.description && (
@@ -425,9 +425,10 @@ function MinimalTemplate({ data, language = "en" }: { data: CVData; language: La
                   {edu.field && <span className="text-muted-foreground"> in {edu.field}</span>}
                   <span className="text-muted-foreground">, {edu.institution}</span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {edu.endDate || edu.startDate}
-                </span>
+                    <span className="text-sm text-muted-foreground">
+                      {translateDate(lead.startDate, language)}
+                      {lead.endDate && ` - ${translateDate(lead.endDate, language)}`}
+                    </span>
               </div>
             ))}
           </div>
@@ -449,7 +450,7 @@ function MinimalTemplate({ data, language = "en" }: { data: CVData; language: La
                     <span className="text-muted-foreground">, {lead.organization}</span>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {lead.startDate} - {lead.endDate || "Present"}
+                    {translateDate(lead.startDate, language)} - {translateDate(lead.endDate || '', language) || getTranslation(language, 'present')}
                   </span>
                 </div>
                 {lead.description && (
