@@ -128,7 +128,7 @@ export function translateDate(dateString: string, language: Language): string {
   if (!dateString) return ''
 
   // Handle "Present" / "Presente" / "Aktuell"
-  if (dateString.toLowerCase() === 'present' || dateString === 'Presente') {
+  if (dateString.toLowerCase() === 'present' || dateString.toLowerCase() === 'presente' || dateString.toLowerCase() === 'aktuell') {
     return getTranslation(language, 'present')
   }
 
@@ -138,15 +138,44 @@ export function translateDate(dateString: string, language: Language): string {
   const monthName = parts[0]
   const year = parts[1] || ''
 
-  // Find the month key (e.g., "Sep" -> "september")
-  const monthKey = Object.keys(months.en).find(
-    (key) => months.en[key].substring(0, 3).toLowerCase() === monthName.toLowerCase()
-  ) || Object.keys(months.en).find(
-    (key) => months.en[key].toLowerCase() === monthName.toLowerCase()
-  )
+  // Find the month key by checking all months in English first
+  let monthKey: string | undefined
+
+  // Try exact match first (case-insensitive full name)
+  for (const key of Object.keys(months.en)) {
+    if (months.en[key].toLowerCase() === monthName.toLowerCase()) {
+      monthKey = key
+      break
+    }
+  }
+
+  // Try 3-letter abbreviation match
+  if (!monthKey) {
+    for (const key of Object.keys(months.en)) {
+      if (months.en[key].substring(0, 3).toLowerCase() === monthName.toLowerCase()) {
+        monthKey = key
+        break
+      }
+    }
+  }
+
+  // If still not found, check if it's already in another language
+  if (!monthKey) {
+    for (const lang of ['es', 'de'] as const) {
+      for (const key of Object.keys(months[lang])) {
+        if (months[lang][key].toLowerCase() === monthName.toLowerCase() || 
+            months[lang][key].substring(0, 3).toLowerCase() === monthName.toLowerCase()) {
+          monthKey = key
+          break
+        }
+      }
+      if (monthKey) break
+    }
+  }
 
   if (monthKey && months[language] && months[language][monthKey]) {
-    const translatedMonth = months[language][monthKey].substring(0, 3)
+    // For target language, use full month name (not abbreviated)
+    const translatedMonth = months[language][monthKey]
     return year ? `${translatedMonth} ${year}` : translatedMonth
   }
 

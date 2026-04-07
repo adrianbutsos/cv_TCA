@@ -124,8 +124,8 @@ function HarvardTemplate({ data, language = "en" }: { data: CVData; language: La
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
-                    {exp.startDate}
-                    {exp.endDate && ` - ${exp.endDate}`}
+                    {translateDate(exp.startDate, language)}
+                    {exp.endDate && ` - ${translateDate(exp.endDate, language)}`}
                   </span>
                 </div>
                 {exp.description && (
@@ -154,8 +154,8 @@ function HarvardTemplate({ data, language = "en" }: { data: CVData; language: La
                     <p className="text-muted-foreground">{lead.organization}</p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
-                    {lead.startDate}
-                    {lead.endDate && ` - ${lead.endDate}`}
+                    {translateDate(lead.startDate, language)}
+                    {lead.endDate && ` - ${translateDate(lead.endDate, language)}`}
                   </span>
                 </div>
                 {lead.description && (
