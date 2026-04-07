@@ -11,7 +11,8 @@ import { SkillsStep } from "./steps/skills-step"
 import { PreviewStep } from "./steps/preview-step"
 import { CVTemplate } from "./cv-templates"
 import { type CVData, initialCVData } from "@/lib/cv-types"
-import { ChevronLeft, ChevronRight, FileText, Eye, EyeOff } from "lucide-react"
+import { ChevronLeft, ChevronRight, FileText, Eye, EyeOff, Sparkles } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
 const steps = [
@@ -139,11 +140,11 @@ export function CVBuilder() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-20">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary flex items-center justify-center">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary flex items-center justify-center flex-shrink-0">
                 <svg viewBox="0 0 40 40" className="h-8 w-8">
                   {/* Diamond shape inspired by the logo */}
                   <polygon points="20,5 35,20 20,35 5,20" fill="currentColor" className="text-primary-foreground" />
@@ -151,34 +152,40 @@ export function CVBuilder() {
                   <polygon points="37,20 28,20 32,16 32,24" fill="currentColor" className="text-secondary opacity-80" />
                 </svg>
               </div>
-              <div className="hidden sm:block">
+              <div className="hidden sm:block min-w-0">
                 <h1 className="text-xl font-serif font-semibold text-foreground leading-tight tracking-tight">CV Builder</h1>
                 <p className="text-xs text-muted-foreground tracking-wide">The Consulting Academy</p>
               </div>
               <h1 className="text-lg font-serif font-semibold text-foreground sm:hidden">CV Builder</h1>
             </div>
             
-            {/* Live Preview Toggle - Only show on non-preview steps */}
-            {currentStep !== 6 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowLivePreview(!showLivePreview)}
-                className="gap-2 hidden lg:flex"
-              >
-                {showLivePreview ? (
-                  <>
-                    <EyeOff className="h-4 w-4" />
-                    Hide Preview
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4" />
-                    Live Preview
-                  </>
-                )}
-              </Button>
-            )}
+            {/* Controls */}
+            <div className="flex items-center gap-2">
+              {/* Live Preview Toggle - Only show on non-preview steps */}
+              {currentStep !== 6 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLivePreview(!showLivePreview)}
+                  className="gap-2 hidden lg:flex"
+                >
+                  {showLivePreview ? (
+                    <>
+                      <EyeOff className="h-4 w-4" />
+                      <span className="hidden xl:inline">Hide Preview</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      <span className="hidden xl:inline">Live Preview</span>
+                    </>
+                  )}
+                </Button>
+              )}
+              
+              {/* Theme Toggle */}
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>
