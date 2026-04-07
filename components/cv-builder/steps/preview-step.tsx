@@ -5,6 +5,7 @@ import type { CVData } from "@/lib/cv-types"
 import { CVTemplate, type TemplateType } from "../cv-templates"
 import { FileText, Pencil, Save } from "lucide-react"
 import { useState } from "react"
+import type { Language } from "@/lib/translations"
 
 interface PreviewStepProps {
   data: CVData
@@ -19,6 +20,7 @@ const templates: { id: TemplateType; name: string }[] = [
 
 export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("harvard")
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>("en")
   const [saving, setSaving] = useState(false)
 
   const handleSaveProgress = () => {
@@ -75,6 +77,26 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
         </div>
       </div>
 
+      {/* Language Selector */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground">CV Language:</span>
+        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+          {(['en', 'es', 'de'] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setSelectedLanguage(lang)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                selectedLanguage === lang
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {lang === 'en' ? 'English' : lang === 'es' ? 'Español' : 'Deutsch'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Export Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleExportPDF} variant="outline" size="sm" className="gap-2">
@@ -96,7 +118,7 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
           </div>
         )}
         
-        <CVTemplate data={data} template={selectedTemplate} />
+        <CVTemplate data={data} template={selectedTemplate} language={selectedLanguage} />
       </div>
     </div>
   )
