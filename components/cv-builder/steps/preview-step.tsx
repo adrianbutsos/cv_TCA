@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import type { CVData } from "@/lib/cv-types"
 import { CVTemplate, type TemplateType } from "../cv-templates"
-import { Download, FileText, Pencil, Save } from "lucide-react"
+import { FileText, Pencil, Save } from "lucide-react"
 import { useState } from "react"
 
 interface PreviewStepProps {
@@ -32,10 +32,6 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
 
   const handleExportPDF = () => {
     alert("PDF export coming soon! (Demo only)")
-  }
-
-  const handleExportDOCX = () => {
-    alert("DOCX export coming soon! (Demo only)")
   }
 
   return (
@@ -84,10 +80,6 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
         <Button onClick={handleExportPDF} variant="outline" size="sm" className="gap-2">
           <FileText className="h-4 w-4" />
           Export PDF
-        </Button>
-        <Button onClick={handleExportDOCX} variant="outline" size="sm" className="gap-2">
-          <Download className="h-4 w-4" />
-          Export DOCX
         </Button>
       </div>
 

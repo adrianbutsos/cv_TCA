@@ -11,7 +11,7 @@ import { SkillsStep } from "./steps/skills-step"
 import { PreviewStep } from "./steps/preview-step"
 import { CVTemplate } from "./cv-templates"
 import { type CVData, initialCVData } from "@/lib/cv-types"
-import { ChevronLeft, ChevronRight, FileText, Eye, EyeOff, Sparkles } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Sparkles } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 
@@ -223,12 +223,7 @@ export function CVBuilder() {
                   <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-              ) : (
-                <Button className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Download CV
-                </Button>
-              )}
+              ) : null}
             </div>
           </div>
 

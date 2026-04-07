@@ -30,7 +30,6 @@ export function EducationStep({ data, onChange }: EducationStepProps) {
       field: "",
       startDate: "",
       endDate: "",
-      gpa: "",
       achievements: "",
     }
     onChange([...data, newEducation])
@@ -130,7 +129,7 @@ export function EducationStep({ data, onChange }: EducationStepProps) {
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-4">
+                <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Start Date</Label>
                     <Input
@@ -148,16 +147,6 @@ export function EducationStep({ data, onChange }: EducationStepProps) {
                       value={edu.endDate}
                       onChange={(e) =>
                         updateEducation(edu.id, "endDate", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>GPA</Label>
-                    <Input
-                      placeholder="3.8/4.0"
-                      value={edu.gpa}
-                      onChange={(e) =>
-                        updateEducation(edu.id, "gpa", e.target.value)
                       }
                     />
                   </div>

@@ -84,7 +84,6 @@ function HarvardTemplate({ data }: { data: CVData }) {
                     <p className="text-muted-foreground">
                       {edu.degree}
                       {edu.field && ` in ${edu.field}`}
-                      {edu.gpa && ` | GPA: ${edu.gpa}`}
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
@@ -272,9 +271,6 @@ function ModernTemplate({ data }: { data: CVData }) {
                       {edu.startDate}
                       {edu.endDate && ` - ${edu.endDate}`}
                     </p>
-                    {edu.gpa && (
-                      <p className="text-xs text-muted-foreground">GPA: {edu.gpa}</p>
-                    )}
                   </div>
                 ))}
               </div>
@@ -422,7 +418,6 @@ function MinimalTemplate({ data }: { data: CVData }) {
                   <span className="font-medium text-foreground">{edu.degree}</span>
                   {edu.field && <span className="text-muted-foreground"> in {edu.field}</span>}
                   <span className="text-muted-foreground">, {edu.institution}</span>
-                  {edu.gpa && <span className="text-muted-foreground"> ({edu.gpa})</span>}
                 </div>
                 <span className="text-sm text-muted-foreground">
                   {edu.endDate || edu.startDate}

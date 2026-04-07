@@ -14,7 +14,6 @@ export interface Education {
   field: string
   startDate: string
   endDate: string
-  gpa?: string
   achievements?: string
 }
 
