@@ -2,9 +2,7 @@
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FileUploadSection } from "@/components/cv-builder/file-upload-section"
 import type { PersonalInfo } from "@/lib/cv-types"
-import type { ExtractedData } from "@/lib/text-extractors"
 
 interface PersonalInfoStepProps {
   data: PersonalInfo
@@ -15,19 +13,6 @@ interface PersonalInfoStepProps {
 export function PersonalInfoStep({ data, onChange, errors = {} }: PersonalInfoStepProps) {
   const handleChange = (field: keyof PersonalInfo, value: string) => {
     onChange({ ...data, [field]: value })
-  }
-
-  const handleDataExtracted = (extractedData: ExtractedData) => {
-    const updatedData = { ...data }
-    
-    if (extractedData.name) updatedData.fullName = extractedData.name
-    if (extractedData.email) updatedData.email = extractedData.email
-    if (extractedData.phone) updatedData.phone = extractedData.phone
-    if (extractedData.location) updatedData.address = extractedData.location
-    if (extractedData.linkedIn) updatedData.linkedin = extractedData.linkedIn
-    if (extractedData.website) updatedData.website = extractedData.website
-    
-    onChange(updatedData)
   }
 
   return (
@@ -75,20 +60,6 @@ export function PersonalInfoStep({ data, onChange, errors = {} }: PersonalInfoSt
           </h2>
           <p className="text-background/70 text-sm tracking-wide uppercase">
             Comencemos con tus datos de contacto
-          </p>
-        </div>
-
-        {/* File Upload Section */}
-        <div className="bg-background/5 rounded-lg p-6">
-          <FileUploadSection onDataExtracted={handleDataExtracted} />
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="text-lg font-serif font-semibold text-background/90">
-            O ingresa manualmente
-          </h3>
-          <p className="text-background/60 text-xs">
-            Completa estos campos directamente si lo prefieres
           </p>
         </div>
 
