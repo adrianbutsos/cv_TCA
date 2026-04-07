@@ -1,0 +1,271 @@
+================================================================================
+  QUICK REFERENCE - FILE UPLOAD SYSTEM
+================================================================================
+
+ARCHIVOS PRINCIPALES:
+─────────────────────────────────────────────────────────────────────────────
+
+1. lib/file-parser.ts (163 líneas)
+   Función principal: parseFile(file: File)
+   ├─ parsePdfFile() - Extrae texto de PDFs
+   ├─ parseDocxFile() - Extrae texto de Word docs
+   ├─ parseTextFile() - Lee archivos de texto
+   ├─ parseImageFile() - OCR en imágenes
+   ├─ getSupportedFileTypes() - Tipos aceptados
+   └─ getSupportedFormatsText() - Formato amigable
+
+2. lib/text-extractors.ts (242 líneas)
+   Función principal: extractAllData(text: string)
+   ├─ extractEmail()
+   ├─ extractPhone()
+   ├─ extractLinkedIn()
+   ├─ extractWebsite()
+   ├─ extractLocation()
+   ├─ extractName()
+   ├─ extractTitle()
+   ├─ extractBio()
+   ├─ getConfidenceScore() - 0-100% quality
+   └─ ExtractedData interface
+
+3. components/cv-builder/file-upload-section.tsx (326 líneas)
+   Componente React principal
+   ├─ Drag & drop zone
+   ├─ File input handler
+   ├─ Processing UI with spinner
+   ├─ Error handling with messages
+   ├─ Preview dialog with confidence score
+   └─ Apply/Discard buttons
+
+4. components/cv-builder/steps/personal-info-step.tsx (MODIFICADO)
+   ├─ Importa FileUploadSection
+   ├─ handleDataExtracted() - Auto-llena campos
+   └─ Integración completa
+
+─────────────────────────────────────────────────────────────────────────────
+
+DEPENDENCIAS:
+─────────────────────────────────────────────────────────────────────────────
+
+pdfjs-dist@^3.11.174
+├─ Mozilla's PDF.js
+├─ Extrae texto de PDFs
+├─ Worker desde CDN
+└─ ~1.5MB (lazy loaded)
+
+mammoth@^1.8.0
+├─ Parsea DOCX/DOC files
+├─ Extrae texto y formato
+└─ ~100KB (lazy loaded)
+
+tesseract.js@^4.1.1
+├─ OCR para imágenes
+├─ Worker-based processing
+└─ ~5MB (lazy loaded)
+
+─────────────────────────────────────────────────────────────────────────────
+
+INTERFAZ DE USUARIO:
+─────────────────────────────────────────────────────────────────────────────
+
+Zona de Carga:
+┌─────────────────────────────────────────┐
+│ 📤 Arrastra archivo o haz clic          │
+│    Soportados: PDF, DOCX, TXT, IMG     │
+└─────────────────────────────────────────┘
+
+Estados:
+├─ Idle: Lista para archivo
+├─ Dragging: Zona activa
+├─ Loading: Procesando con spinner
+├─ Error: Mensaje rojo con alerta
+└─ Success: Mensaje verde, ready to preview
+
+Preview Dialog:
+┌─────────────────────────────────────────┐
+│ Vista previa de datos extraídos         │
+├─────────────────────────────────────────┤
+│ Confianza: [████████░] 85%             │
+├─────────────────────────────────────────┤
+│ Nombre: Juan Pérez                      │
+│ Email: juan@example.com                 │
+│ Teléfono: +34 600 123 456              │
+│ ... etc ...                             │
+├─────────────────────────────────────────┤
+│ [Descartar]         [Aplicar Datos]     │
+└─────────────────────────────────────────┘
+
+─────────────────────────────────────────────────────────────────────────────
+
+FLUJO DE DATOS:
+─────────────────────────────────────────────────────────────────────────────
+
+Usuario
+  ↓
+Carga archivo (drag/drop/click)
+  ↓
+FileUploadSection.processFile()
+  ↓
+parseFile(file)
+  ├─ Detecta tipo
+  ├─ Parsea según tipo (PDF/DOCX/TXT/IMG)
+  └─ Retorna texto extraído
+  ↓
+extractAllData(text)
+  ├─ Aplica regex patterns
+  ├─ Busca: email, phone, name, etc
+  └─ Retorna ExtractedData structured
+  ↓
+Muestra preview dialog
+  ├─ Calcula confidence score
+  └─ Muestra datos encontrados
+  ↓
+Usuario hace clic "Aplicar Datos"
+  ↓
+handleDataExtracted()
+  ├─ Auto-llena campos en personal-info
+  └─ Cierra preview
+
+─────────────────────────────────────────────────────────────────────────────
+
+PATRONES DE REGEX:
+─────────────────────────────────────────────────────────────────────────────
+
+Email:
+  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g
+
+Phone (múltiples formatos):
+  /(\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|.../ g
+
+LinkedIn:
+  /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9-]+)/gi
+
+Website:
+  /https?:\/\/(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)*/gi
+
+Location (City, Country):
+  /([A-Z][a-zA-Z]+),\s*([A-Z]{2}|[A-Z][a-zA-Z]+)/g
+
+Title (job positions):
+  /(?:Senior|Junior|Mid-level|...)?\s*(?:Engineer|Developer|...)/gi
+
+─────────────────────────────────────────────────────────────────────────────
+
+TIPOS DE ARCHIVOS SOPORTADOS:
+─────────────────────────────────────────────────────────────────────────────
+
+Formato        MIME Type                      Handler
+─────────────────────────────────────────────────────────────────────────────
+PDF            application/pdf                parsePdfFile()
+Word (DOCX)    application/vnd.openxml...    parseDocxFile()
+Word (DOC)     application/msword             parseDocxFile()
+Text           text/plain                     parseTextFile()
+Markdown       text/markdown                  parseTextFile()
+PNG            image/png                      parseImageFile()
+JPG/JPEG       image/jpeg                     parseImageFile()
+GIF            image/gif                      parseImageFile()
+BMP            image/bmp                      parseImageFile()
+
+Tamaño máximo: 50MB
+Validación: Por tamaño y tipo MIME
+
+─────────────────────────────────────────────────────────────────────────────
+
+SCORING DE CONFIANZA:
+─────────────────────────────────────────────────────────────────────────────
+
+> 70% = ✅ Alta (verde)
+  ├─ Nombre encontrado
+  ├─ Email encontrado
+  └─ Mínimo 2 campos adicionales
+
+40-70% = ⚠️  Media (amarillo)
+  ├─ Algunos campos encontrados
+  └─ Verificación manual recomendada
+
+< 40% = ❌ Baja (rojo)
+  ├─ Pocos o ningún campo encontrado
+  └─ Verificación manual necesaria
+
+─────────────────────────────────────────────────────────────────────────────
+
+ERROR HANDLING:
+─────────────────────────────────────────────────────────────────────────────
+
+Errores comunes y soluciones:
+
+1. "File is too large"
+   └─ Máximo 50MB, reduce tamaño
+
+2. "Failed to parse PDF"
+   └─ Verifica que sea PDF válido
+
+3. "Failed to parse DOCX"
+   └─ Intenta en otro formato
+
+4. "Failed to extract text from image"
+   └─ Normal para imágenes, intenta con documento escaneado
+
+5. OCR muy lento
+   └─ Normal (1-5 segundos), es procesamiento local
+
+─────────────────────────────────────────────────────────────────────────────
+
+PRIVACIDAD & SEGURIDAD:
+─────────────────────────────────────────────────────────────────────────────
+
+✅ Datos procesados en navegador (client-side)
+✅ NO se envían a servidores
+✅ NO se almacenan archivos
+✅ NO hay tracking
+✅ GDPR compliant
+✅ Compatible con dark mode
+
+─────────────────────────────────────────────────────────────────────────────
+
+TESTING:
+─────────────────────────────────────────────────────────────────────────────
+
+1. Prueba PDF
+   - Descarga cualquier CV en PDF
+   - Arrastra a la zona
+   - Verifica extracción
+
+2. Prueba DOCX
+   - Crea documento Word con datos
+   - Carga y verifica
+
+3. Prueba Imagen
+   - Escanea o toma foto de documento
+   - Carga y espera OCR
+   - Verifica texto extraído
+
+4. Prueba Dark Mode
+   - Alterna tema
+   - Verifica colores y contraste
+
+─────────────────────────────────────────────────────────────────────────────
+
+DOCUMENTACIÓN COMPLETA:
+─────────────────────────────────────────────────────────────────────────────
+
+📄 FILE_UPLOAD_README.md
+   - Overview y features
+   
+📄 DEPENDENCIES_GUIDE.md
+   - Detalles de dependencias
+   
+📄 VERSION_FIXES.md
+   - Correcciones realizadas
+   
+📄 FILE_UPLOAD_GUIDE.md
+   - Guía de usuario
+   
+📄 DEVELOPER_GUIDE_FILE_UPLOAD.md
+   - Guía técnica para developers
+   
+📄 FLOW_DIAGRAM.txt
+   - Diagramas de flujo visual
+
+────────────────────────────────────────────────────────────────────────────
+¡LISTO PARA USAR!
+────────────────────────────────────────────────────────────────────────────

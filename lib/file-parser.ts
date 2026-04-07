@@ -3,8 +3,6 @@
  * Supports: PDF, DOCX, TXT, Images (with OCR)
  */
 
-import { Packer, Document } from 'docx';
-
 /**
  * Parse text file
  */
@@ -26,27 +24,34 @@ export async function parseTextFile(file: File): Promise<string> {
 export async function parsePdfFile(file: File): Promise<string> {
   try {
     // Dynamically import pdfjs-dist
-    const pdfjsLib = await import('pdfjs-dist');
+    const pdfModule = await import('pdfjs-dist');
+    const pdfjsLib = pdfModule.default || pdfModule;
     
-    // Set up the worker
-    const pdfWorker = await import('pdfjs-dist/build/pdf.worker');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+    // Set worker source
+    if (typeof window !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    }
 
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     
     let fullText = '';
 
     for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      fullText += pageText + '\n';
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => (item.str || ''))
+          .join(' ');
+        fullText += pageText + '\n';
+      } catch (pageError) {
+        console.warn(`[v0] Error processing page ${i}:`, pageError);
+        // Continue with next page if one fails
+      }
     }
 
-    return fullText;
+    return fullText.trim() || 'No text found in PDF';
   } catch (error) {
     console.error('[v0] Error parsing PDF:', error);
     throw new Error('Failed to parse PDF file. Please ensure it\'s a valid PDF.');
@@ -77,7 +82,8 @@ export async function parseDocxFile(file: File): Promise<string> {
 export async function parseImageFile(file: File): Promise<string> {
   try {
     // Dynamically import tesseract
-    const Tesseract = await import('tesseract.js');
+    const TesseractModule = await import('tesseract.js');
+    const Tesseract = TesseractModule.default || TesseractModule;
 
     const reader = new FileReader();
     
@@ -87,10 +93,14 @@ export async function parseImageFile(file: File): Promise<string> {
           const imageSrc = e.target?.result as string;
           
           // Use Tesseract to extract text
-          const { data: { text } } = await Tesseract.recognize(imageSrc, 'eng');
-          resolve(text);
+          const worker = await Tesseract.createWorker('eng');
+          const { data: { text } } = await worker.recognize(imageSrc);
+          await worker.terminate();
+          
+          resolve(text || 'No text detected in image');
         } catch (error) {
-          reject(error);
+          console.warn('[v0] OCR failed, returning empty:', error);
+          resolve(''); // Return empty instead of throwing for images
         }
       };
       reader.onerror = reject;
@@ -98,7 +108,8 @@ export async function parseImageFile(file: File): Promise<string> {
     });
   } catch (error) {
     console.error('[v0] Error parsing image:', error);
-    throw new Error('Failed to extract text from image. Please try with a clearer image.');
+    // Don't throw - OCR is optional, return empty string
+    return '';
   }
 }
 
@@ -106,10 +117,16 @@ export async function parseImageFile(file: File): Promise<string> {
  * Main parser function - detects file type and parses accordingly
  */
 export async function parseFile(file: File): Promise<string> {
+  // Validate file size (max 50MB)
+  const maxSize = 50 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error('File is too large. Maximum size is 50MB.');
+  }
+
   const fileType = file.type.toLowerCase();
   const fileName = file.name.toLowerCase();
 
-  console.log('[v0] Parsing file:', fileName, 'Type:', fileType);
+  console.log('[v0] Parsing file:', fileName, 'Type:', fileType, 'Size:', file.size);
 
   try {
     // PDF files
@@ -120,7 +137,9 @@ export async function parseFile(file: File): Promise<string> {
     // DOCX files
     if (
       fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      fileName.endsWith('.docx')
+      fileType === 'application/msword' ||
+      fileName.endsWith('.docx') ||
+      fileName.endsWith('.doc')
     ) {
       return await parseDocxFile(file);
     }
@@ -128,6 +147,7 @@ export async function parseFile(file: File): Promise<string> {
     // Text files
     if (
       fileType.includes('text') ||
+      fileType === 'application/plain' ||
       fileName.endsWith('.txt') ||
       fileName.endsWith('.md')
     ) {
@@ -140,6 +160,7 @@ export async function parseFile(file: File): Promise<string> {
     }
 
     // Fallback: try to read as text
+    console.log('[v0] File type unknown, attempting text parse as fallback');
     return await parseTextFile(file);
   } catch (error) {
     console.error('[v0] Error parsing file:', error);
