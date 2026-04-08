@@ -60,53 +60,99 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
     }, 1000)
   }
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => {
     if (!cvRef.current) return
     setIsExporting(true)
-    try {
-      const html2canvas = (await import("html2canvas")).default
-      const jsPDF = (await import("jspdf")).default
 
-      const canvas = await html2canvas(cvRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
+    // Collect styles from the current page (same-origin only)
+    const styleSheets = Array.from(document.styleSheets)
+      .map((sheet) => {
+        try {
+          return Array.from(sheet.cssRules).map((r) => r.cssText).join('\n')
+        } catch {
+          return sheet.href ? `@import url('${sheet.href}');` : ''
+        }
       })
+      .join('\n')
 
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      })
+    const cvHTML = cvRef.current.innerHTML
+    const name = (data.personalInfo?.fullName || 'CV').replace(/\s+/g, '_')
 
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pageWidth
-      const imgHeight = (canvas.height * pageWidth) / canvas.width
-
-      let heightLeft = imgHeight
-      let position = 0
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
-
-      const name = data.personalInfo?.fullName?.replace(/\s+/g, "_") || "CV"
-      pdf.save(`${name}_CV.pdf`)
-    } catch (error) {
-      console.error("[v0] PDF export error:", error)
-      alert("Error exporting PDF. Please try again.")
-    } finally {
-      setIsExporting(false)
+    // Build the full HTML document to print
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${name}</title>
+  <style>
+    ${styleSheets}
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #ffffff !important;
+      color: #000000 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
+    @page { size: A4 portrait; margin: 12mm 15mm; }
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="p-8 bg-white text-black max-w-4xl mx-auto">${cvHTML}</div>
+</body>
+</html>`
+
+    // Create a hidden iframe — never blocked by browsers (no popup)
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.top = '-9999px'
+    iframe.style.left = '-9999px'
+    iframe.style.width = '210mm'
+    iframe.style.height = '297mm'
+    iframe.style.border = 'none'
+
+    const doPrint = () => {
+      try {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+      } catch (err) {
+        console.error('[v0] print() error:', err)
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe)
+          }
+          setIsExporting(false)
+        }, 1000)
+      }
+    }
+
+    // Assign onload BEFORE appending to DOM to avoid race condition
+    iframe.onload = doPrint
+
+    document.body.appendChild(iframe)
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!iframeDoc) {
+      document.body.removeChild(iframe)
+      setIsExporting(false)
+      return
+    }
+
+    iframeDoc.open()
+    iframeDoc.write(html)
+    iframeDoc.close()
+
+    // Fallback: if onload never fires (some browsers skip it after write()),
+    // trigger print after a short delay anyway
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        doPrint()
+      }
+    }, 800)
   }
 
   return (
