@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import type { CVData } from "@/lib/cv-types"
 import { CVTemplate, type TemplateType } from "../cv-templates"
 import { FileText, Pencil, Save, Loader2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Language } from "@/lib/translations"
 import { translateCVData } from "@/lib/cv-translator"
 
@@ -25,6 +25,8 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
   const [saving, setSaving] = useState(false)
   const [translatedData, setTranslatedData] = useState<CVData>(data)
   const [isTranslating, setIsTranslating] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const cvRef = useRef<HTMLDivElement>(null)
 
   // Translate data when language changes
   useEffect(() => {
@@ -58,8 +60,53 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
     }, 1000)
   }
 
-  const handleExportPDF = () => {
-    alert("PDF export coming soon! (Demo only)")
+  const handleExportPDF = async () => {
+    if (!cvRef.current) return
+    setIsExporting(true)
+    try {
+      const html2canvas = (await import("html2canvas")).default
+      const jsPDF = (await import("jspdf")).default
+
+      const canvas = await html2canvas(cvRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      })
+
+      const imgData = canvas.toDataURL("image/png")
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      })
+
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const imgWidth = pageWidth
+      const imgHeight = (canvas.height * pageWidth) / canvas.width
+
+      let heightLeft = imgHeight
+      let position = 0
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      const name = data.personalInfo?.fullName?.replace(/\s+/g, "_") || "CV"
+      pdf.save(`${name}_CV.pdf`)
+    } catch (error) {
+      console.error("[v0] PDF export error:", error)
+      alert("Error exporting PDF. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -125,9 +172,13 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
 
       {/* Export Buttons */}
       <div className="flex flex-wrap gap-2">
-        <Button onClick={handleExportPDF} variant="outline" size="sm" className="gap-2">
-          <FileText className="h-4 w-4" />
-          Export PDF
+        <Button onClick={handleExportPDF} variant="outline" size="sm" className="gap-2" disabled={isExporting}>
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileText className="h-4 w-4" />
+          )}
+          {isExporting ? "Exporting..." : "Export PDF"}
         </Button>
       </div>
 
@@ -150,7 +201,9 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
           </div>
         )}
         
-        <CVTemplate data={translatedData} template={selectedTemplate} language={selectedLanguage} />
+        <div ref={cvRef}>
+          <CVTemplate data={translatedData} template={selectedTemplate} language={selectedLanguage} />
+        </div>
       </div>
     </div>
   )
