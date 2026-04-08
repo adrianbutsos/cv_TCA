@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import type { CVData } from "@/lib/cv-types"
 import { CVTemplate, type TemplateType } from "../cv-templates"
-import { FileText, Pencil, Save } from "lucide-react"
+import { FileText, Pencil, Save, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import type { Language } from "@/lib/translations"
 import { translateCVData } from "@/lib/cv-translator"
@@ -133,6 +133,12 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
 
       {/* CV Preview with Edit Buttons */}
       <div className="relative bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+        {isTranslating && (
+          <div className="absolute inset-0 z-20 bg-background/60 backdrop-blur-sm flex items-center justify-center gap-3 rounded-lg">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium text-foreground">Translating CV...</span>
+          </div>
+        )}
         {/* Section Edit Buttons */}
         {onEditSection && (
           <div className="absolute right-4 top-4 flex flex-col gap-2 z-10">

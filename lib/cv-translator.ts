@@ -1,107 +1,55 @@
-import type { CVData, Education, Experience, Leadership, Skill } from '@/lib/cv-types'
+import type { CVData } from '@/lib/cv-types'
 import type { Language } from '@/lib/translations'
+import { translateDate } from '@/lib/translations'
 
 /**
- * Simple translation dictionary for common CV terms
+ * Send all texts at once to the translation API and return the translated array.
+ * If any error occurs, returns the original texts unchanged.
  */
-const translationMap: Record<Language, Record<string, string>> = {
-  en: {
-    present: 'Present',
-    honorsProgram: 'Honors Program',
-    teachingAssistant: 'Teaching Assistant',
-    built: 'Built',
-    optimized: 'Optimized',
-    presented: 'Presented',
-    developed: 'Developed',
-    created: 'Created',
-    managed: 'Managed',
-    led: 'Led',
-    improved: 'Improved',
-    implemented: 'Implemented',
-  },
-  es: {
-    present: 'Presente',
-    honorsProgram: 'Programa de Honores',
-    teachingAssistant: 'Asistente de Enseñanza',
-    built: 'Construí',
-    optimized: 'Optimicé',
-    presented: 'Presenté',
-    developed: 'Desarrollé',
-    created: 'Creé',
-    managed: 'Administré',
-    led: 'Lideré',
-    improved: 'Mejoré',
-    implemented: 'Implementé',
-  },
-  de: {
-    present: 'Aktuell',
-    honorsProgram: 'Ehrenprogramm',
-    teachingAssistant: 'Lehrbeauftragter',
-    built: 'Gebaut',
-    optimized: 'Optimiert',
-    presented: 'Präsentiert',
-    developed: 'Entwickelt',
-    created: 'Erstellt',
-    managed: 'Verwaltet',
-    led: 'Geleitet',
-    improved: 'Verbessert',
-    implemented: 'Implementiert',
-  },
-}
+async function batchTranslate(texts: string[], targetLanguage: Language): Promise<string[]> {
+  // Filter out empty strings but keep track of indices
+  const nonEmptyIndices: number[] = []
+  const nonEmptyTexts: string[] = []
 
-/**
- * Detect language from text (simple heuristic)
- */
-function detectLanguage(text: string): Language {
-  if (!text) return 'en'
-  
-  // Simple Spanish patterns
-  if (/ción|amente|está|más|año/i.test(text)) return 'es'
-  // Simple German patterns
-  if (/ung|lich|der|die|das|ität|sch/i.test(text)) return 'de'
-  
-  return 'en'
-}
+  texts.forEach((t, i) => {
+    if (t && t.trim()) {
+      nonEmptyIndices.push(i)
+      nonEmptyTexts.push(t)
+    }
+  })
 
-/**
- * Translate content based on detected source language
- */
-async function translateContent(
-  text: string,
-  targetLanguage: Language,
-  sourceLanguage?: Language
-): Promise<string> {
-  if (!text || targetLanguage === 'en') return text
-  
-  const source = sourceLanguage || detectLanguage(text)
-  if (source === targetLanguage) return text
+  if (nonEmptyTexts.length === 0) return texts
 
-  // For now, use simple pattern replacement
-  // In production, you'd call an API for better translation
   try {
     const response = await fetch('/api/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        targetLanguage,
-        sourceLanguage: source,
-      }),
+      body: JSON.stringify({ texts: nonEmptyTexts, targetLanguage }),
     })
-    
-    if (response.ok) {
-      const data = await response.json()
-      return data.translatedText || text
-    }
-  } catch (error) {
-    console.warn('[v0] Translation API error:', error)
-  }
 
-  return text
+    if (!response.ok) return texts
+
+    const data = await response.json()
+    const translated = data.translatedTexts as string[]
+
+    if (!translated || translated.length !== nonEmptyTexts.length) return texts
+
+    // Rebuild the full array, inserting translations at the right positions
+    const result = [...texts]
+    nonEmptyIndices.forEach((originalIdx, translatedIdx) => {
+      result[originalIdx] = translated[translatedIdx]
+    })
+    return result
+  } catch (error) {
+    console.error('[v0] Batch translation failed:', error)
+    return texts
+  }
 }
 
 /**
- * Translate an entire CV data object
+ * Translates an entire CVData object into the target language.
+ * Dates are translated locally, all text content is sent to the AI API.
+ * Returns a new CVData object with all fields translated.
  */
 export async function translateCVData(
   cvData: CVData,
@@ -109,49 +57,74 @@ export async function translateCVData(
 ): Promise<CVData> {
   if (targetLanguage === 'en') return cvData
 
-  const translated = { ...cvData }
+  // Collect ALL text fields into one flat array for a single API call
+  const textsToTranslate: string[] = []
+  const indices = {
+    eduAchievements: [] as number[],
+    expDescriptions: [] as number[],
+    expAchievements: [] as number[],
+    leadDescriptions: [] as number[],
+    leadAchievements: [] as number[],
+    skillNames: [] as number[],
+  }
 
-  // Translate education descriptions and achievements
-  translated.education = await Promise.all(
-    cvData.education.map(async (edu) => ({
+  cvData.education.forEach((edu) => {
+    indices.eduAchievements.push(textsToTranslate.length)
+    textsToTranslate.push(edu.achievements || '')
+  })
+
+  cvData.experience.forEach((exp) => {
+    indices.expDescriptions.push(textsToTranslate.length)
+    textsToTranslate.push(exp.description || '')
+    indices.expAchievements.push(textsToTranslate.length)
+    textsToTranslate.push(exp.achievements || '')
+  })
+
+  cvData.leadership.forEach((lead) => {
+    indices.leadDescriptions.push(textsToTranslate.length)
+    textsToTranslate.push(lead.description || '')
+    indices.leadAchievements.push(textsToTranslate.length)
+    textsToTranslate.push(lead.achievements || '')
+  })
+
+  cvData.skills.forEach((skill) => {
+    indices.skillNames.push(textsToTranslate.length)
+    textsToTranslate.push(skill.name || '')
+  })
+
+  // One single API call for ALL text content
+  const translated = await batchTranslate(textsToTranslate, targetLanguage)
+
+  // Reassemble the CVData with translated content and translated dates
+  return {
+    ...cvData,
+
+    education: cvData.education.map((edu, i) => ({
       ...edu,
-      achievements: edu.achievements ? await translateContent(edu.achievements, targetLanguage) : '',
-    }))
-  )
+      startDate: translateDate(edu.startDate, targetLanguage),
+      endDate: translateDate(edu.endDate, targetLanguage),
+      achievements: translated[indices.eduAchievements[i]] ?? edu.achievements,
+    })),
 
-  // Translate experience descriptions and achievements
-  translated.experience = await Promise.all(
-    cvData.experience.map(async (exp) => ({
+    experience: cvData.experience.map((exp, i) => ({
       ...exp,
-      description: exp.description ? await translateContent(exp.description, targetLanguage) : '',
-      achievements: exp.achievements ? await translateContent(exp.achievements, targetLanguage) : '',
-    }))
-  )
+      startDate: translateDate(exp.startDate, targetLanguage),
+      endDate: translateDate(exp.endDate, targetLanguage),
+      description: translated[indices.expDescriptions[i]] ?? exp.description,
+      achievements: translated[indices.expAchievements[i]] ?? exp.achievements,
+    })),
 
-  // Translate leadership descriptions
-  translated.leadership = await Promise.all(
-    cvData.leadership.map(async (lead) => ({
+    leadership: cvData.leadership.map((lead, i) => ({
       ...lead,
-      description: lead.description ? await translateContent(lead.description, targetLanguage) : '',
-      achievements: lead.achievements ? await translateContent(lead.achievements, targetLanguage) : '',
-    }))
-  )
+      startDate: translateDate(lead.startDate, targetLanguage),
+      endDate: translateDate(lead.endDate, targetLanguage),
+      description: translated[indices.leadDescriptions[i]] ?? lead.description,
+      achievements: translated[indices.leadAchievements[i]] ?? lead.achievements,
+    })),
 
-  // Skills are usually not translated, but we can handle it
-  translated.skills = cvData.skills.map((skill) => ({
-    ...skill,
-    name: skill.name, // Usually keep skill names in English
-  }))
-
-  return translated
-}
-
-/**
- * Quick translate for single fields
- */
-export async function translateField(
-  value: string,
-  targetLanguage: Language
-): Promise<string> {
-  return translateContent(value, targetLanguage)
+    skills: cvData.skills.map((skill, i) => ({
+      ...skill,
+      name: translated[indices.skillNames[i]] ?? skill.name,
+    })),
+  }
 }
