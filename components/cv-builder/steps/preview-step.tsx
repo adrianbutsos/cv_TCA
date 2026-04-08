@@ -64,80 +64,80 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
     if (!cvRef.current) return
     setIsExporting(true)
 
-    try {
-      // Collect all stylesheets from the current page
-      const styleSheets = Array.from(document.styleSheets)
-        .map((sheet) => {
-          try {
-            return Array.from(sheet.cssRules)
-              .map((rule) => rule.cssText)
-              .join('\n')
-          } catch {
-            // Cross-origin stylesheets can't be read; use link tag instead
-            if (sheet.href) return `@import url('${sheet.href}');`
-            return ''
-          }
-        })
-        .join('\n')
+    // Collect styles from the current page (same-origin only)
+    const styleSheets = Array.from(document.styleSheets)
+      .map((sheet) => {
+        try {
+          return Array.from(sheet.cssRules).map((r) => r.cssText).join('\n')
+        } catch {
+          return sheet.href ? `@import url('${sheet.href}');` : ''
+        }
+      })
+      .join('\n')
 
-      const cvHTML = cvRef.current.innerHTML
+    const cvHTML = cvRef.current.innerHTML
+    const name = (data.personalInfo?.fullName || 'CV').replace(/\s+/g, '_')
 
-      const printWindow = window.open('', '_blank', 'width=900,height=700')
-      if (!printWindow) {
-        alert('Please allow popups for this site to export PDF.')
-        setIsExporting(false)
-        return
-      }
-
-      printWindow.document.write(`<!DOCTYPE html>
+    // Build the full HTML document to print
+    const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${data.personalInfo?.fullName || 'CV'}</title>
+  <title>${name}</title>
   <style>
     ${styleSheets}
-    /* Reset for print */
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       background: #ffffff !important;
       color: #000000 !important;
-      font-family: Georgia, 'Times New Roman', serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    @page {
-      size: A4 portrait;
-      margin: 10mm 15mm;
-    }
+    @page { size: A4 portrait; margin: 12mm 15mm; }
     @media print {
-      body { margin: 0; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style>
 </head>
 <body>
-  <div class="p-8 bg-white text-black max-w-4xl mx-auto">
-    ${cvHTML}
-  </div>
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-        window.close();
-      }, 500);
-    };
-  <\/script>
+  <div class="p-8 bg-white text-black max-w-4xl mx-auto">${cvHTML}</div>
 </body>
-</html>`)
+</html>`
 
-      printWindow.document.close()
-    } catch (error) {
-      console.error('[v0] PDF export error:', error)
-      alert('Error exporting PDF. Please try again.')
-    } finally {
+    // Create a hidden iframe — never blocked by browsers (no popup)
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.top = '-9999px'
+    iframe.style.left = '-9999px'
+    iframe.style.width = '210mm'
+    iframe.style.height = '297mm'
+    iframe.style.border = 'none'
+    document.body.appendChild(iframe)
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!iframeDoc) {
+      document.body.removeChild(iframe)
       setIsExporting(false)
+      return
+    }
+
+    iframeDoc.open()
+    iframeDoc.write(html)
+    iframeDoc.close()
+
+    // Wait for fonts/images to load, then print
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+      } finally {
+        // Remove iframe after print dialog closes
+        setTimeout(() => {
+          document.body.removeChild(iframe)
+          setIsExporting(false)
+        }, 1000)
+      }
     }
   }
 
