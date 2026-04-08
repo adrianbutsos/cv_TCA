@@ -2,14 +2,79 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Language } from '@/lib/translations'
 
 /**
- * API route para traducir contenido usando el Vercel AI Gateway
- * Soporta traducción automática de cualquier idioma a EN, ES o DE
+ * Simple translation API route
+ * Uses pattern matching and predefined translations
  */
 
 const languageNames: Record<Language, string> = {
   en: 'English',
   es: 'Spanish',
   de: 'German',
+}
+
+// Simple translation patterns for common CV terms
+const translationPatterns: Record<Language, Record<string, string>> = {
+  en: {},
+  es: {
+    // Common English → Spanish translations for CV
+    'built': 'construí',
+    'optimized': 'optimicé',
+    'improved': 'mejoré',
+    'implemented': 'implementé',
+    'developed': 'desarrollé',
+    'created': 'creé',
+    'managed': 'administré',
+    'led': 'lideré',
+    'presented': 'presenté',
+    'designed': 'diseñé',
+    'testing framework': 'marco de pruebas',
+    'code coverage': 'cobertura de código',
+    'page load times': 'tiempos de carga de página',
+    'database queries': 'consultas de base de datos',
+    'faster': 'más rápido',
+    'from': 'de',
+    'to': 'a',
+    'resulting in': 'resultando en',
+    'that': 'que',
+  },
+  de: {
+    // Common English → German translations for CV
+    'built': 'gebaut',
+    'optimized': 'optimiert',
+    'improved': 'verbessert',
+    'implemented': 'implementiert',
+    'developed': 'entwickelt',
+    'created': 'erstellt',
+    'managed': 'verwaltet',
+    'led': 'geleitet',
+    'presented': 'präsentiert',
+    'designed': 'entworfen',
+    'testing framework': 'Test-Framework',
+    'code coverage': 'Code-Abdeckung',
+    'page load times': 'Seitenladezeiten',
+    'database queries': 'Datenbankabfragen',
+    'faster': 'schneller',
+    'from': 'von',
+    'to': 'zu',
+    'resulting in': 'was zu führt',
+    'that': 'das',
+  },
+}
+
+function simpleTranslate(text: string, targetLanguage: Language): string {
+  if (targetLanguage === 'en') return text
+  if (!text) return text
+
+  let result = text
+  const patterns = translationPatterns[targetLanguage]
+
+  // Replace patterns case-insensitively
+  for (const [source, target] of Object.entries(patterns)) {
+    const regex = new RegExp(`\\b${source}\\b`, 'gi')
+    result = result.replace(regex, target)
+  }
+
+  return result
 }
 
 export async function POST(request: NextRequest) {
@@ -30,67 +95,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Usar Vercel AI Gateway para traducción
-    // Por ahora, retornamos el texto sin cambios (para demostración)
-    // En producción, se integraría con un servicio de traducción real
-    
-    const prompt = `Translate the following text to ${languageNames[targetLanguage]}. 
-Only return the translated text, nothing else. Do not include explanations or quotes.
+    // Use simple pattern-based translation
+    const translatedText = simpleTranslate(text, targetLanguage)
 
-Text: "${text}"`
-
-    try {
-      // Intentar usar Vercel AI Gateway si está configurado
-      const response = await fetch('https://api.vercel.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.AI_GATEWAY_API_KEY || ''}`,
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-4-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a professional translator. Translate text accurately while maintaining formatting and style.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 500,
-        }),
-      })
-
-      if (!response.ok) {
-        console.log('[v0] AI Gateway not available, returning original text')
-        // Si no hay IA disponible, retornar el texto original
-        return NextResponse.json({
-          translatedText: text,
-          translatedWithAI: false,
-        })
-      }
-
-      const data = await response.json()
-      const translatedText =
-        data.choices?.[0]?.message?.content || text
-
-      return NextResponse.json({
-        translatedText: translatedText.trim(),
-        translatedWithAI: true,
-      })
-    } catch (error) {
-      console.warn('[v0] Translation failed:', error)
-      // Fallback: retornar texto original si IA no está disponible
-      return NextResponse.json({
-        translatedText: text,
-        translatedWithAI: false,
-      })
-    }
+    return NextResponse.json({
+      translatedText,
+      originalText: text,
+      targetLanguage,
+    })
   } catch (error) {
-    console.error('[v0] API error:', error)
+    console.error('[v0] Translation API error:', error)
     return NextResponse.json(
       { error: 'Translation failed' },
       { status: 500 }

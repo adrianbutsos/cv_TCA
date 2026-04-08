@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import type { CVData } from "@/lib/cv-types"
 import { CVTemplate, type TemplateType } from "../cv-templates"
 import { FileText, Pencil, Save } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { Language } from "@/lib/translations"
+import { translateCVData } from "@/lib/cv-translator"
 
 interface PreviewStepProps {
   data: CVData
@@ -22,6 +23,31 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("harvard")
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en")
   const [saving, setSaving] = useState(false)
+  const [translatedData, setTranslatedData] = useState<CVData>(data)
+  const [isTranslating, setIsTranslating] = useState(false)
+
+  // Translate data when language changes
+  useEffect(() => {
+    const performTranslation = async () => {
+      if (selectedLanguage === 'en') {
+        setTranslatedData(data)
+        return
+      }
+
+      setIsTranslating(true)
+      try {
+        const translated = await translateCVData(data, selectedLanguage)
+        setTranslatedData(translated)
+      } catch (error) {
+        console.error('[v0] Translation error:', error)
+        setTranslatedData(data)
+      } finally {
+        setIsTranslating(false)
+      }
+    }
+
+    performTranslation()
+  }, [selectedLanguage, data])
 
   const handleSaveProgress = () => {
     setSaving(true)
@@ -118,7 +144,7 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
           </div>
         )}
         
-        <CVTemplate data={data} template={selectedTemplate} language={selectedLanguage} />
+        <CVTemplate data={translatedData} template={selectedTemplate} language={selectedLanguage} />
       </div>
     </div>
   )
