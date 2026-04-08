@@ -113,6 +113,26 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
     iframe.style.width = '210mm'
     iframe.style.height = '297mm'
     iframe.style.border = 'none'
+
+    const doPrint = () => {
+      try {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+      } catch (err) {
+        console.error('[v0] print() error:', err)
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe)
+          }
+          setIsExporting(false)
+        }, 1000)
+      }
+    }
+
+    // Assign onload BEFORE appending to DOM to avoid race condition
+    iframe.onload = doPrint
+
     document.body.appendChild(iframe)
 
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
@@ -126,19 +146,13 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
     iframeDoc.write(html)
     iframeDoc.close()
 
-    // Wait for fonts/images to load, then print
-    iframe.onload = () => {
-      try {
-        iframe.contentWindow?.focus()
-        iframe.contentWindow?.print()
-      } finally {
-        // Remove iframe after print dialog closes
-        setTimeout(() => {
-          document.body.removeChild(iframe)
-          setIsExporting(false)
-        }, 1000)
+    // Fallback: if onload never fires (some browsers skip it after write()),
+    // trigger print after a short delay anyway
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        doPrint()
       }
-    }
+    }, 800)
   }
 
   return (
