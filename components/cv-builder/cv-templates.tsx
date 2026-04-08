@@ -1,6 +1,8 @@
 "use client"
 
 import type { CVData } from "@/lib/cv-types"
+import type { Language } from "@/lib/translations"
+import { getTranslation, translateDate } from "@/lib/translations"
 import { Mail, Phone, MapPin, Globe, Linkedin } from "lucide-react"
 
 export type TemplateType = "harvard" | "modern" | "minimal"
@@ -8,23 +10,25 @@ export type TemplateType = "harvard" | "modern" | "minimal"
 interface CVTemplateProps {
   data: CVData
   template: TemplateType
+  language?: Language
 }
 
-export function CVTemplate({ data, template }: CVTemplateProps) {
+export function CVTemplate({ data, template, language = "en" }: CVTemplateProps) {
   switch (template) {
     case "harvard":
-      return <HarvardTemplate data={data} />
+      return <HarvardTemplate data={data} language={language} />
     case "modern":
-      return <ModernTemplate data={data} />
+      return <ModernTemplate data={data} language={language} />
     case "minimal":
-      return <MinimalTemplate data={data} />
+      return <MinimalTemplate data={data} language={language} />
     default:
-      return <HarvardTemplate data={data} />
+      return <HarvardTemplate data={data} language={language} />
   }
 }
 
-function HarvardTemplate({ data }: { data: CVData }) {
+function HarvardTemplate({ data, language = "en" }: { data: CVData; language: Language }) {
   const { personalInfo, education, experience, leadership, skills } = data
+  const t = (key: string) => getTranslation(language, key)
 
   return (
     <div className="p-6 sm:p-10 font-serif" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
@@ -73,7 +77,7 @@ function HarvardTemplate({ data }: { data: CVData }) {
       {education.length > 0 && (
         <section className="mb-6">
           <h2 className="text-lg font-bold text-foreground uppercase tracking-wide border-b border-border pb-1 mb-3">
-            Education
+            {t('education')}
           </h2>
           <div className="space-y-4">
             {education.map((edu) => (
@@ -84,12 +88,11 @@ function HarvardTemplate({ data }: { data: CVData }) {
                     <p className="text-muted-foreground">
                       {edu.degree}
                       {edu.field && ` in ${edu.field}`}
-                      {edu.gpa && ` | GPA: ${edu.gpa}`}
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
-                    {edu.startDate}
-                    {edu.endDate && ` - ${edu.endDate}`}
+                    {translateDate(edu.startDate, language)}
+                    {edu.endDate && ` - ${translateDate(edu.endDate, language)}`}
                   </span>
                 </div>
                 {edu.achievements && (
@@ -107,7 +110,7 @@ function HarvardTemplate({ data }: { data: CVData }) {
       {experience.length > 0 && (
         <section className="mb-6">
           <h2 className="text-lg font-bold text-foreground uppercase tracking-wide border-b border-border pb-1 mb-3">
-            Experience
+            {t('experience')}
           </h2>
           <div className="space-y-4">
             {experience.map((exp) => (
@@ -121,8 +124,8 @@ function HarvardTemplate({ data }: { data: CVData }) {
                     </p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
-                    {exp.startDate}
-                    {exp.endDate && ` - ${exp.endDate}`}
+                    {translateDate(exp.startDate, language)}
+                    {exp.endDate && ` - ${translateDate(exp.endDate, language)}`}
                   </span>
                 </div>
                 {exp.description && (
@@ -140,7 +143,7 @@ function HarvardTemplate({ data }: { data: CVData }) {
       {leadership.length > 0 && (
         <section className="mb-6">
           <h2 className="text-lg font-bold text-foreground uppercase tracking-wide border-b border-border pb-1 mb-3">
-            Leadership & Activities
+            {t('leadership')}
           </h2>
           <div className="space-y-4">
             {leadership.map((lead) => (
@@ -151,8 +154,8 @@ function HarvardTemplate({ data }: { data: CVData }) {
                     <p className="text-muted-foreground">{lead.organization}</p>
                   </div>
                   <span className="text-sm text-muted-foreground sm:text-right">
-                    {lead.startDate}
-                    {lead.endDate && ` - ${lead.endDate}`}
+                    {translateDate(lead.startDate, language)}
+                    {lead.endDate && ` - ${translateDate(lead.endDate, language)}`}
                   </span>
                 </div>
                 {lead.description && (
@@ -170,7 +173,7 @@ function HarvardTemplate({ data }: { data: CVData }) {
       {skills.length > 0 && (
         <section>
           <h2 className="text-lg font-bold text-foreground uppercase tracking-wide border-b border-border pb-1 mb-3">
-            Skills
+            {t('skills')}
           </h2>
           <p className="text-muted-foreground">{skills.join(" • ")}</p>
         </section>
@@ -190,8 +193,9 @@ function HarvardTemplate({ data }: { data: CVData }) {
   )
 }
 
-function ModernTemplate({ data }: { data: CVData }) {
+function ModernTemplate({ data, language = "en" }: { data: CVData; language: Language }) {
   const { personalInfo, education, experience, leadership, skills } = data
+  const t = (key: string) => getTranslation(language, key)
 
   return (
     <div className="p-6 sm:p-10 font-sans">
@@ -240,7 +244,7 @@ function ModernTemplate({ data }: { data: CVData }) {
           {skills.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
-                Skills
+                {t('skillsLabel')}
               </h2>
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill, index) => (
@@ -258,7 +262,7 @@ function ModernTemplate({ data }: { data: CVData }) {
           {education.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
-                Education
+                {t('education')}
               </h2>
               <div className="space-y-4">
                 {education.map((edu) => (
@@ -269,12 +273,9 @@ function ModernTemplate({ data }: { data: CVData }) {
                       {edu.field && ` in ${edu.field}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {edu.startDate}
-                      {edu.endDate && ` - ${edu.endDate}`}
+                      {translateDate(edu.startDate, language)}
+                      {edu.endDate && ` - ${translateDate(edu.endDate, language)}`}
                     </p>
-                    {edu.gpa && (
-                      <p className="text-xs text-muted-foreground">GPA: {edu.gpa}</p>
-                    )}
                   </div>
                 ))}
               </div>
@@ -287,7 +288,7 @@ function ModernTemplate({ data }: { data: CVData }) {
           {experience.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
-                Experience
+                {t('experience')}
               </h2>
               <div className="space-y-5">
                 {experience.map((exp) => (
@@ -301,8 +302,8 @@ function ModernTemplate({ data }: { data: CVData }) {
                         </p>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {exp.startDate}
-                        {exp.endDate && ` - ${exp.endDate}`}
+                        {translateDate(exp.startDate, language)}
+                        {exp.endDate && ` - ${translateDate(exp.endDate, language)}`}
                       </span>
                     </div>
                     {exp.description && (
@@ -319,7 +320,7 @@ function ModernTemplate({ data }: { data: CVData }) {
           {leadership.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
-                Leadership & Activities
+                {t('leadership')}
               </h2>
               <div className="space-y-5">
                 {leadership.map((lead) => (
@@ -330,8 +331,8 @@ function ModernTemplate({ data }: { data: CVData }) {
                         <p className="text-sm text-muted-foreground">{lead.organization}</p>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {lead.startDate}
-                        {lead.endDate && ` - ${lead.endDate}`}
+                        {translateDate(lead.startDate, language)}
+                        {lead.endDate && ` - ${translateDate(lead.endDate, language)}`}
                       </span>
                     </div>
                     {lead.description && (
@@ -361,8 +362,9 @@ function ModernTemplate({ data }: { data: CVData }) {
   )
 }
 
-function MinimalTemplate({ data }: { data: CVData }) {
+function MinimalTemplate({ data, language = "en" }: { data: CVData; language: Language }) {
   const { personalInfo, education, experience, leadership, skills } = data
+  const t = (key: string) => getTranslation(language, key)
 
   return (
     <div className="p-6 sm:p-10 font-sans">
@@ -384,7 +386,7 @@ function MinimalTemplate({ data }: { data: CVData }) {
       {experience.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
-            Experience
+            {t('experience')}
           </h2>
           <div className="space-y-4">
             {experience.map((exp) => (
@@ -395,7 +397,7 @@ function MinimalTemplate({ data }: { data: CVData }) {
                     <span className="text-muted-foreground"> at {exp.company}</span>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {exp.startDate} - {exp.endDate || "Present"}
+                    {translateDate(exp.startDate, language)} - {translateDate(exp.endDate || '', language) || getTranslation(language, 'present')}
                   </span>
                 </div>
                 {exp.description && (
@@ -413,7 +415,7 @@ function MinimalTemplate({ data }: { data: CVData }) {
       {education.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
-            Education
+            {t('education')}
           </h2>
           <div className="space-y-3">
             {education.map((edu) => (
@@ -422,11 +424,11 @@ function MinimalTemplate({ data }: { data: CVData }) {
                   <span className="font-medium text-foreground">{edu.degree}</span>
                   {edu.field && <span className="text-muted-foreground"> in {edu.field}</span>}
                   <span className="text-muted-foreground">, {edu.institution}</span>
-                  {edu.gpa && <span className="text-muted-foreground"> ({edu.gpa})</span>}
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {edu.endDate || edu.startDate}
-                </span>
+                    <span className="text-sm text-muted-foreground">
+                      {translateDate(lead.startDate, language)}
+                      {lead.endDate && ` - ${translateDate(lead.endDate, language)}`}
+                    </span>
               </div>
             ))}
           </div>
@@ -437,7 +439,7 @@ function MinimalTemplate({ data }: { data: CVData }) {
       {leadership.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
-            Leadership
+            {t('leadership')}
           </h2>
           <div className="space-y-3">
             {leadership.map((lead) => (
@@ -448,7 +450,7 @@ function MinimalTemplate({ data }: { data: CVData }) {
                     <span className="text-muted-foreground">, {lead.organization}</span>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {lead.startDate} - {lead.endDate || "Present"}
+                    {translateDate(lead.startDate, language)} - {translateDate(lead.endDate || '', language) || getTranslation(language, 'present')}
                   </span>
                 </div>
                 {lead.description && (
@@ -466,7 +468,7 @@ function MinimalTemplate({ data }: { data: CVData }) {
       {skills.length > 0 && (
         <section>
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Skills
+            {t('skills')}
           </h2>
           <p className="text-sm text-muted-foreground">{skills.join(", ")}</p>
         </section>

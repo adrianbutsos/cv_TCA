@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { MonthYearPicker } from "@/components/ui/month-year-picker"
 import type { Education } from "@/lib/cv-types"
-import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react"
+import { Plus, Trash2, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
 
 interface EducationStepProps {
@@ -30,7 +31,6 @@ export function EducationStep({ data, onChange }: EducationStepProps) {
       field: "",
       startDate: "",
       endDate: "",
-      gpa: "",
       achievements: "",
     }
     onChange([...data, newEducation])
@@ -130,35 +130,25 @@ export function EducationStep({ data, onChange }: EducationStepProps) {
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-4">
+                <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Start Date</Label>
-                    <Input
-                      placeholder="Sep 2018"
+                    <MonthYearPicker
                       value={edu.startDate}
-                      onChange={(e) =>
-                        updateEducation(edu.id, "startDate", e.target.value)
+                      onChange={(value) =>
+                        updateEducation(edu.id, "startDate", value)
                       }
+                      placeholder="Sep 2018"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>End Date</Label>
-                    <Input
-                      placeholder="May 2022"
+                    <MonthYearPicker
                       value={edu.endDate}
-                      onChange={(e) =>
-                        updateEducation(edu.id, "endDate", e.target.value)
+                      onChange={(value) =>
+                        updateEducation(edu.id, "endDate", value)
                       }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>GPA</Label>
-                    <Input
-                      placeholder="3.8/4.0"
-                      value={edu.gpa}
-                      onChange={(e) =>
-                        updateEducation(edu.id, "gpa", e.target.value)
-                      }
+                      placeholder="May 2022"
                     />
                   </div>
                 </div>
