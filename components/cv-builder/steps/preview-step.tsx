@@ -60,50 +60,82 @@ export function PreviewStep({ data, onEditSection }: PreviewStepProps) {
     }, 1000)
   }
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => {
     if (!cvRef.current) return
     setIsExporting(true)
+
     try {
-      const html2canvas = (await import("html2canvas")).default
-      const jsPDF = (await import("jspdf")).default
+      // Collect all stylesheets from the current page
+      const styleSheets = Array.from(document.styleSheets)
+        .map((sheet) => {
+          try {
+            return Array.from(sheet.cssRules)
+              .map((rule) => rule.cssText)
+              .join('\n')
+          } catch {
+            // Cross-origin stylesheets can't be read; use link tag instead
+            if (sheet.href) return `@import url('${sheet.href}');`
+            return ''
+          }
+        })
+        .join('\n')
 
-      const canvas = await html2canvas(cvRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      })
+      const cvHTML = cvRef.current.innerHTML
 
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      })
-
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pageWidth
-      const imgHeight = (canvas.height * pageWidth) / canvas.width
-
-      let heightLeft = imgHeight
-      let position = 0
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
+      const printWindow = window.open('', '_blank', 'width=900,height=700')
+      if (!printWindow) {
+        alert('Please allow popups for this site to export PDF.')
+        setIsExporting(false)
+        return
       }
 
-      const name = data.personalInfo?.fullName?.replace(/\s+/g, "_") || "CV"
-      pdf.save(`${name}_CV.pdf`)
+      printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${data.personalInfo?.fullName || 'CV'}</title>
+  <style>
+    ${styleSheets}
+    /* Reset for print */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: Georgia, 'Times New Roman', serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page {
+      size: A4 portrait;
+      margin: 10mm 15mm;
+    }
+    @media print {
+      body { margin: 0; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="p-8 bg-white text-black max-w-4xl mx-auto">
+    ${cvHTML}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+        window.close();
+      }, 500);
+    };
+  <\/script>
+</body>
+</html>`)
+
+      printWindow.document.close()
     } catch (error) {
-      console.error("[v0] PDF export error:", error)
-      alert("Error exporting PDF. Please try again.")
+      console.error('[v0] PDF export error:', error)
+      alert('Error exporting PDF. Please try again.')
     } finally {
       setIsExporting(false)
     }
