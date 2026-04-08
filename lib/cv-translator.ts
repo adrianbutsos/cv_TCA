@@ -89,7 +89,7 @@ export async function translateCVData(
 
   cvData.skills.forEach((skill) => {
     indices.skillNames.push(textsToTranslate.length)
-    textsToTranslate.push(skill.name || '')
+    textsToTranslate.push(typeof skill === 'string' ? skill : '')
   })
 
   // One single API call for ALL text content
@@ -122,9 +122,8 @@ export async function translateCVData(
       achievements: translated[indices.leadAchievements[i]] ?? lead.achievements,
     })),
 
-    skills: cvData.skills.map((skill, i) => ({
-      ...skill,
-      name: translated[indices.skillNames[i]] ?? skill.name,
-    })),
+    skills: cvData.skills.map((skill, i) =>
+      (translated[indices.skillNames[i]] || skill) as string
+    ),
   }
 }
