@@ -1,60 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateText } from 'ai'
 import type { Language } from '@/lib/translations'
 
-const languageNames: Record<Language, string> = {
-  en: 'English',
-  es: 'Spanish',
-  de: 'German',
+// MyMemory language codes
+const langCodes: Record<Language, string> = {
+  en: 'en-US',
+  es: 'es-ES',
+  de: 'de-DE',
+}
+
+/**
+ * Translate a single text using MyMemory free API (no auth required)
+ */
+async function translateOne(text: string, from: string, to: string): Promise<string> {
+  if (!text.trim()) return text
+
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`MyMemory error: ${res.status}`)
+
+  const data = await res.json()
+  if (data.responseStatus === 200 && data.responseData?.translatedText) {
+    return data.responseData.translatedText
+  }
+  return text // fallback to original
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { texts, targetLanguage } = await request.json()
+    const { texts, targetLanguage, sourceLanguage = 'en' } = await request.json()
 
     if (!texts || !targetLanguage) {
       return NextResponse.json({ error: 'Missing texts or targetLanguage' }, { status: 400 })
-    }
-
-    if (!['en', 'es', 'de'].includes(targetLanguage)) {
-      return NextResponse.json({ error: 'Invalid target language' }, { status: 400 })
     }
 
     if (targetLanguage === 'en') {
       return NextResponse.json({ translatedTexts: texts })
     }
 
-    const targetLangName = languageNames[targetLanguage as Language]
+    const fromCode = langCodes[sourceLanguage as Language] ?? 'en-US'
+    const toCode = langCodes[targetLanguage as Language]
 
-    // Build a numbered list of texts to translate in one request
-    const numbered = (texts as string[])
-      .map((t: string, i: number) => `${i + 1}. ${t}`)
-      .join('\n')
-
-    const { text } = await generateText({
-      model: 'openai/gpt-4o-mini',
-      system: `You are a professional CV/resume translator. 
-Translate the provided numbered list of texts into ${targetLangName}.
-Rules:
-- Keep the same numbering format (1. 2. 3. etc.)
-- Preserve proper nouns, company names, tool names, and technical terms as-is
-- Keep percentages and numbers unchanged
-- Translate in a professional tone appropriate for a CV/resume
-- Return ONLY the numbered translated lines, nothing else`,
-      prompt: numbered,
-    })
-
-    // Parse the numbered response back into an array
-    const translatedTexts = text
-      .split('\n')
-      .filter((line) => /^\d+\./.test(line.trim()))
-      .map((line) => line.replace(/^\d+\.\s*/, '').trim())
-
-    // Safety: if parsing fails, return originals
-    if (translatedTexts.length !== texts.length) {
-      console.error('[v0] Translation count mismatch, returning originals')
-      return NextResponse.json({ translatedTexts: texts })
+    if (!toCode) {
+      return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
     }
+
+    // Translate all texts in parallel
+    const translatedTexts = await Promise.all(
+      (texts as string[]).map((text) => translateOne(text, fromCode, toCode))
+    )
 
     return NextResponse.json({ translatedTexts })
   } catch (error) {
